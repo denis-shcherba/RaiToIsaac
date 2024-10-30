@@ -1,6 +1,90 @@
+
+"""
+This script demonstrates different single-arm manipulators.
+
+.. code-block:: bash
+
+    # Usage
+    ./isaaclab.sh -p source/standalone/demos/arms.py
+
+"""
+
+"""Launch Isaac Sim Simulator first."""
+
+import argparse
+
+from omni.isaac.lab.app import AppLauncher
+
+# add argparse arguments
+parser = argparse.ArgumentParser(description="This script demonstrates different single-arm manipulators.")
+# append AppLauncher cli args
+AppLauncher.add_app_launcher_args(parser)
+# parse the arguments
+args_cli = parser.parse_args()
+
+# launch omniverse app
+app_launcher = AppLauncher(args_cli)
+simulation_app = app_launcher.app
+
+"""Rest everything follows."""
+
+import numpy as np
+import torch
+
+import omni.isaac.core.utils.prims as prim_utils
+
+import omni.isaac.lab.sim as sim_utils
+from omni.isaac.lab.assets import Articulation
+from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
+
+##
+# Pre-defined configs
+##
+# isort: off
+from omni.isaac.lab_assets import (
+    FRANKA_PANDA_CFG,
+)
+
+# isort: on
+
+
+def design_scene() -> tuple[dict, list[float]]:
+    """Designs the scene."""
+    # Ground-plane
+    cfg = sim_utils.GroundPlaneCfg()
+    cfg.func("/World/defaultGroundPlane", cfg)
+    
+    # Lights
+    cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
+    cfg.func("/World/Light", cfg)
+
+    # Single origin with Franka Panda
+    origin = [.0, .0, .0]
+
+    # Table
+    cfg_cuboid = sim_utils.MeshCuboidCfg(
+        size=(4, 4, .1),
+        visual_material=sim_utils.PreviewSurfaceCfg(),
+        rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
+        physics_material=sim_utils.RigidBodyMaterialCfg(),
+        collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
+    )
+
+    cfg_cuboid2 = sim_utils.MeshCuboidCfg(
+        size=(.2, .2, 0.2),
+        deformable_props=sim_utils.DeformableBodyPropertiesCfg(rest_offset=0.0),
+        visual_material=sim_utils.PreviewSurfaceCfg(),
+        physics_material=sim_utils.DeformableBodyMaterialCfg(),
+    )
+
+    prim_utils.create_prim("/World/Origin1", "Xform", translation=origin)
+    cfg_cuboid.func("/World/Origin1/Table", cfg_cuboid, translation=(.0, .0, .7))
+
+    cfg_cuboid2.func("/World/Origin1/Test", cfg_cuboid2, translation=(0.55, 2.0, 2.05))
+
     # Robot
     franka_arm_cfg = FRANKA_PANDA_CFG.replace(prim_path="/World/Origin1/Robot")
-    franka_arm_cfg.init_state.pos = (0.0, 0.0, .65)
+    franka_arm_cfg.init_state.pos = (0.0, 0.0, 1.05)
     franka_panda = Articulation(cfg=franka_arm_cfg)
 
     # Return the scene information

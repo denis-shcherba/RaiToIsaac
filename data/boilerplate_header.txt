@@ -60,4 +60,4 @@ def design_scene() -> tuple[dict, list[float]]:
         collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
     )
     
-    cfg_table.func("/World/Origin1/Table", cfg_table, translation=(.0, .0, .7))
+    cfg_table.func("/World/Origin1/Table", cfg_table, translation=(.0, .0, .6))

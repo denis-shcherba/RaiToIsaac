@@ -121,6 +121,15 @@ def design_scene() -> tuple[dict, list[float]]:
     )
 
     cfg_cuboid.func("/World/Origin1/Sphere", cfg_cuboid, translation=(.25,.1,1.))
+    
+    #Test prim
+    prim_utils.create_prim(
+    prim_path="/World/Cube2",
+    prim_type="Cube",
+    position=np.array([1.0, 0.5, 2.0]),
+    attributes={"size": 2.0}
+    )
+
 
     # Robot
     franka_arm_cfg = FRANKA_PANDA_CFG.replace(prim_path="/World/Origin1/Robot")
@@ -132,8 +141,26 @@ def design_scene() -> tuple[dict, list[float]]:
     scene_entities = {"franka_panda": franka_panda}
     return scene_entities, origin
 
+def print_prim_tree(prim_path="/World", level=0):
+    """Recursively print the hierarchy of prims and their frame information."""
+    prim = prim_utils.get_prim_at_path(prim_path)
+    if not prim:
+        print(f"Prim at {prim_path} does not exist.")
+        return
+    
+    print(f"{'  ' * level}Prim: {prim_path}")
+    
+    # Recursively print child prims
+    for child in prim.GetChildren():
+        print_prim_tree(child.GetPath().pathString, level + 1)
 
 def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articulation], origins: torch.Tensor):
+
+
+
+# Call the function to print the tree starting from /World
+    print_prim_tree()
+
     """Runs the simulation loop."""
     # Define simulation stepping
     sim_dt = sim.get_physics_dt()

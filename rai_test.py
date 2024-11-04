@@ -19,15 +19,44 @@ C.addFrame('cylinder') \
 C.addFrame('capsule') \
     .setPosition([.05,.1,1.]) \
     .setShape(ry.ST.capsule, [.15, .05]) \
-    .setColor([.0,1.,.5]) 
+    .setColor([.0,1.,.5]) \
+    .setQuaternion([1, 0, 1, 0])
 
 C.addFrame('sphere') \
     .setPosition([.25,.1,1.]) \
     .setShape(ry.ST.sphere, [.05]) \
+    .setContact(1) \
+    .setMass(1) \
     .setColor([.4, .3, .7]) \
-    .setContact(1)
+
+if "mass" in C.getFrame("sphere").info():
+    print(C.getFrame("sphere").info()["mass"])      
 
 C.view(True)
+
+print(C.getFrame("sphere").getPose())
+print(C.getFrame("sphere").getPosition())
+print(C.getFrame("sphere").getQuaternion())
+print(C.getFrame("sphere").getRelativeQuaternion())
+print(C.getFrame("sphere").getRelativePosition())
+print(C.getFrame("sphere").getQuaternion())
+print(C.getFrame("sphere").getSize())
+print(C.getFrame("box").info())
+
+
+
+
+new_frames  = C.getFrameNames()
+
+for name in new_frames:
+    print(name, (C.getFrame(name).getParent().info()["name"], C.getFrame(name).getParent().info()["X"]) if C.getFrame(name).getParent() else "zo")
+
+
+
+
+
+
+
 
     # class robotic.ry.Frame
 
@@ -37,29 +66,8 @@ C.view(True)
 
     #     add/set attributes for the frame
 
-    #     getAttributes(self: robotic.ry.Frame) → dict
 
     #     get frame attributes
-
-    #     getJointState(self: robotic.ry.Frame) → arr
-
-    #     getMeshPoints(self: robotic.ry.Frame) → arr
-
-    #     getMeshTriangles(self: robotic.ry.Frame) → uintA
-
-    #     getPosition(self: robotic.ry.Frame) → arr
-
-    #     getQuaternion(self: robotic.ry.Frame) → arr
-
-    #     getRelativePosition(self: robotic.ry.Frame) → arr
-
-    #     getRelativeQuaternion(self: robotic.ry.Frame) → arr
-
-    #     getRotationMatrix(self: robotic.ry.Frame) → arr
-
-    #     getSize(self: robotic.ry.Frame) → arr
-
-    #     info(self: robotic.ry.Frame) → dict
 
     #     setAttribute(self: robotic.ry.Frame, arg0: str, arg1: float) → robotic.ry.Frame
 

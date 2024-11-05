@@ -28,13 +28,11 @@ from omni.isaac.lab_assets import (
 
 
 def config2config(C: ry.Config) -> tuple[dict, list[float]]:
-    # TODO Camera, Origin maybe? (for different origins, actually not that important rn)
-    """Designs the scene."""
-    # Ground-plane
+    # TODO Camera, Origin maybe? (for different origins, actually not that important rn)7
+    
     cfg = sim_utils.GroundPlaneCfg()
     cfg.func("/World/defaultGroundPlane", cfg)
     
-    # Light
     cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
     cfg.func("/World/Light", cfg)
 
@@ -66,9 +64,7 @@ def config2config(C: ry.Config) -> tuple[dict, list[float]]:
     
             cfg_table.func(f"/World/Origin/name", cfg_table, translation=tuple(frame.getPosition()))
 
-        elif "panda_base" in name:
-            print(name, (C.getFrame(name).getParent().info()["name"], C.getFrame(name).getParent().info()["X"]) if C.getFrame(name).getParent() else "zo")
-            
+        elif "panda_base" in name:            
             # Panda
             franka_name = name
             franka_arm_cfg = FRANKA_PANDA_CFG.replace(prim_path=f"/World/Origin/{franka_name}")
@@ -192,22 +188,17 @@ def main():
 
     C.view(True)
     
-    # design scene
-    scene_entities, scene_origins = config2config(C)
+    # translate scene
+    scene_entities = config2config(C)
 
-    # Initialize the simulation context
     sim_cfg = sim_utils.SimulationCfg(device=args_cli.device)
     sim = sim_utils.SimulationContext(sim_cfg)
     # Set main camera
     sim.set_camera_view([0, 3.5, 3.5], [0.0, 0.0, 0.5])
 
-    scene_origins = torch.tensor(scene_origins, device=sim.device)
-    # Play the simulator
     sim.reset()
-    # Now we are ready!
     print("[INFO]: Setup complete...")
-    # Run the simulator
-    run_simulator(sim, scene_entities, scene_origins)
+    run_simulator(sim, scene_entities)
 
 
 if __name__ == "__main__":

@@ -28,68 +28,88 @@ from omni.isaac.lab_assets import (
 
 
 def config2config(C: ry.Config):
-
+    # TODO Camera, Origin maybe? (for different origin, actually not that important rn)
     tmp_config = ry.Config()
     tmp_config.addFile(ry.raiPath('../rai-robotModels/scenarios/pandaSingle.g'))
 
-    initFrameNames = C.getFrameNames()     
+    frameNames = C.getFrameNames()     
+    scene_entities = {}
 
+    origin = [.0, .0, .0]
+    prim_utils.create_prim("/World/Origin1", "Xform", translation=origin)
 
-    new_frames  = list(set(initFrameNames) ^ set(tmp_config.getFrameNames()))
+    for name in frameNames:
 
+        frame = C.getFrame(name)
 
-    for name in new_frames:
-        obj_frame = C.getFrame(name)
-        ST = obj_frame.getShapeType()
+        if "panda_base" in name and frame.getParent().info()["name"]=="origin":
+            print(name, (C.getFrame(name).getParent().info()["name"], C.getFrame(name).getParent().info()["X"]) if C.getFrame(name).getParent() else "zo")
+            
+            # Robot
+            franka_name = name
+            franka_arm_cfg = FRANKA_PANDA_CFG.replace(prim_path=f"/World/Origin1/{franka_name}")
+            franka_arm_cfg.init_state.pos = tuple(frame.getPosition())
+            franka_arm_cfg.init_state.rot = (1/np.sqrt(2), 0.0, 0.0, 1/np.sqrt(2))
+            franka_panda = Articulation(cfg=franka_arm_cfg)
 
-        if ST == ry.ST.box:
-            cfg_cuboid = sim_utils.MeshCuboidCfg(
-                size=tuple(obj_frame.getSize()),
-                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(obj_frame.info()["color"])),
+            # Return the scene information
+            scene_entities[franka_name] = franka_panda
+            return scene_entities
+
+        elif "table" in name and frame.getParent().info()["name"]=="origin":
+            pass
+            
+        elif not frame.getParent():
+            ST = frame.getShapeType()
+
+            if ST == ry.ST.box:
+                cfg_cuboid = sim_utils.MeshCuboidCfg(
+                    size=tuple(frame.getSize()),
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.info()["color"])),
+                    rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
+                    physics_material=sim_utils.RigidBodyMaterialCfg(),
+                    collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
+                )
+
+                cfg_cuboid.func("/World/Origin_obj/Cuboid", cfg_cuboid, translation=tuple(frame.getPosition()))
+            
+            
+            if ST == ry.ST.sphere:
+                cfg_cuboid = sim_utils.MeshSphereCfg(
+                radius=tuple(frame.getSize()),
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.info()["color"])),
                 rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
                 physics_material=sim_utils.RigidBodyMaterialCfg(),
                 collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
             )
 
-            cfg_cuboid.func("/World/Origin_obj/Cuboid", cfg_cuboid, translation=tuple(obj_frame.getPosition()))
-        
-        
-        if ST == ry.ST.sphere:
-            cfg_cuboid = sim_utils.MeshSphereCfg(
-            radius=tuple(obj_frame.getSize()),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(obj_frame.info()["color"])),
-            rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
-            physics_material=sim_utils.RigidBodyMaterialCfg(),
-            collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
-        )
+                cfg_cuboid.func("/World/Origin_obj/Sphere", cfg_cuboid, translation=tuple(frame.getPosition()))
 
-            cfg_cuboid.func("/World/Origin_obj/Sphere", cfg_cuboid, translation=tuple(obj_frame.getPosition()))
-
-        if ST == ry.ST.capsule:
-            cfg_cuboid = sim_utils.MeshCapsuleCfg(
-            radius= obj_frame.getSize()[1],
-            height= obj_frame.getSize()[0], 
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(obj_frame.info()["color"])),
-            rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
-            physics_material=sim_utils.RigidBodyMaterialCfg(),
-            collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
-            )
-
-            cfg_cuboid.func("/World/Origin_obj/Capsule", cfg_cuboid, translation=tuple(obj_frame.getPosition()))
-
-        if ST == ry.ST.cylinder:
-            cfg_cylinder = sim_utils.MeshCylinderCfg(
-                radius= obj_frame.getSize()[1],
-                height= obj_frame.getSize()[0], 
-                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(obj_frame.info()["color"])),
+            if ST == ry.ST.capsule:
+                cfg_cuboid = sim_utils.MeshCapsuleCfg(
+                radius= frame.getSize()[1],
+                height= frame.getSize()[0], 
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.info()["color"])),
                 rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
                 physics_material=sim_utils.RigidBodyMaterialCfg(),
                 collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
-            )
+                )
 
-            cfg_cylinder.func("/World/Origin_obj/Cylinder", cfg_cylinder, translation=tuple(obj_frame.getPosition()))
+                cfg_cuboid.func("/World/Origin_obj/Capsule", cfg_cuboid, translation=tuple(frame.getPosition()))
 
+            if ST == ry.ST.cylinder:
+                cfg_cylinder = sim_utils.MeshCylinderCfg(
+                    radius= frame.getSize()[1],
+                    height= frame.getSize()[0], 
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.info()["color"])),
+                    rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
+                    physics_material=sim_utils.RigidBodyMaterialCfg(),
+                    collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
+                )
 
+                cfg_cylinder.func("/World/Origin_obj/Cylinder", cfg_cylinder, translation=tuple(frame.getPosition()))
+
+    return scene_entities, origin
 
 
 def design_scene() -> tuple[dict, list[float]]:
@@ -118,17 +138,6 @@ def design_scene() -> tuple[dict, list[float]]:
     )
     
     cfg_table.func("/World/Origin1/Table", cfg_table, translation=(.0, .0, .6))
-
-
-    # Robot
-    franka_arm_cfg = FRANKA_PANDA_CFG.replace(prim_path="/World/Origin1/Robot")
-    franka_arm_cfg.init_state.pos = (0.0, -.2, .65)
-    franka_arm_cfg.init_state.rot = (0.7071067811865476, 0.0, 0.0, 0.7071067811865475)
-    franka_panda = Articulation(cfg=franka_arm_cfg)
-
-    # Return the scene information
-    scene_entities = {"franka_panda": franka_panda}
-    return scene_entities, origin
 
 def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articulation], origins: torch.Tensor):
     """Runs the simulation loop."""

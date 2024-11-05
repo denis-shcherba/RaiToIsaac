@@ -27,8 +27,21 @@ from omni.isaac.lab_assets import (
 
 
 
-def config2config(C: ry.Config):
-    # TODO Camera, Origin maybe? (for different origin, actually not that important rn)
+def config2config(C: ry.Config) -> tuple[dict, list[float]]:
+    # TODO Camera, Origin maybe? (for different origins, actually not that important rn)
+    """Designs the scene."""
+    # Ground-plane
+    cfg = sim_utils.GroundPlaneCfg()
+    cfg.func("/World/defaultGroundPlane", cfg)
+    
+    # Light
+    cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
+    cfg.func("/World/Light", cfg)
+
+    origin = [.0, .0, .0]
+
+    prim_utils.create_prim("/World/Origin", "Xform", translation=origin)
+
     tmp_config = ry.Config()
     tmp_config.addFile(ry.raiPath('../rai-robotModels/scenarios/pandaSingle.g'))
 
@@ -41,17 +54,28 @@ def config2config(C: ry.Config):
 
         frame = C.getFrame(name)
 
-        if "panda_base" in name:
+        if "table" in name:
+            # Table
+            cfg_table = sim_utils.MeshCuboidCfg(
+                size=tuple(frame.getSize()[:3]),
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=tuple(frame.info()["color"])),
+                rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
+                physics_material=sim_utils.RigidBodyMaterialCfg(),
+                collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
+            )
+    
+            cfg_table.func(f"/World/Origin/name", cfg_table, translation=tuple(frame.getPosition()))
+
+        elif "panda_base" in name:
             print(name, (C.getFrame(name).getParent().info()["name"], C.getFrame(name).getParent().info()["X"]) if C.getFrame(name).getParent() else "zo")
             
-            # Robot
+            # Panda
             franka_name = name
-            franka_arm_cfg = FRANKA_PANDA_CFG.replace(prim_path=f"/World/Origin1/{franka_name}")
+            franka_arm_cfg = FRANKA_PANDA_CFG.replace(prim_path=f"/World/Origin/{franka_name}")
             franka_arm_cfg.init_state.pos = tuple(frame.getPosition())
             franka_arm_cfg.init_state.rot = (1/np.sqrt(2), 0.0, 0.0, 1/np.sqrt(2))
             franka_panda = Articulation(cfg=franka_arm_cfg)
 
-            # Return the scene information
             scene_entities[franka_name] = franka_panda
 
         elif "table" in name and frame.getParent().info()["name"]=="origin":
@@ -108,37 +132,11 @@ def config2config(C: ry.Config):
 
                 cfg_cylinder.func("/World/Origin_obj/Cylinder", cfg_cylinder, translation=tuple(frame.getPosition()))
 
-    return scene_entities, origin
+    return scene_entities
 
 
-def design_scene() -> tuple[dict, list[float]]:
-    """Designs the scene."""
-    # Ground-plane
-    cfg = sim_utils.GroundPlaneCfg()
-    cfg.func("/World/defaultGroundPlane", cfg)
-    
-    # Lights
-    cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
-    cfg.func("/World/Light", cfg)
 
-    # Single origin with Franka Panda
-    origin = [.0, .0, .0]
-
-    prim_utils.create_prim("/World/Origin1", "Xform", translation=origin)
-
-
-    # Table
-    cfg_table = sim_utils.MeshCuboidCfg(
-        size=(2.5, 2.5, .1),
-        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(.3,.3,.3)),
-        rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
-        physics_material=sim_utils.RigidBodyMaterialCfg(),
-        collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
-    )
-    
-    cfg_table.func("/World/Origin1/Table", cfg_table, translation=(.0, .0, .6))
-
-def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articulation], origins: torch.Tensor):
+def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articulation]):
     """Runs the simulation loop."""
     # Define simulation stepping
     sim_dt = sim.get_physics_dt()
@@ -195,7 +193,6 @@ def main():
     C.view(True)
     
     # design scene
-    design_scene()
     scene_entities, scene_origins = config2config(C)
 
     # Initialize the simulation context

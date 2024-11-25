@@ -3,6 +3,8 @@ import robotic as ry
 import argparse
 from omni.isaac.lab.app import AppLauncher
 
+# Initialize the simulation context
+
 parser = argparse.ArgumentParser(description="This script demonstrates different single-arm manipulators.")
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
@@ -14,11 +16,11 @@ simulation_app = app_launcher.app
 import numpy as np
 import torch 
 
+
 import omni.isaac.core.utils.prims as prim_utils
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import Articulation
-from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 
 
 from omni.isaac.lab_assets import (
@@ -26,14 +28,16 @@ from omni.isaac.lab_assets import (
 )
 
 
-
 def config2config(C: ry.Config) -> tuple[dict, list[float]]:
     # TODO Camera, Origin maybe? (for different origins, actually not that important rn)7
     
     cfg = sim_utils.GroundPlaneCfg()
     cfg.func("/World/defaultGroundPlane", cfg)
-    
-    cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
+        
+    cfg = sim_utils.DomeLightCfg(
+        intensity=700.0,
+        color=(1.0, 0.98, 0.95)  # Warm, slightly yellow-white
+    )
     cfg.func("/World/Light", cfg)
 
     origin = [.0, .0, .0]
@@ -41,7 +45,7 @@ def config2config(C: ry.Config) -> tuple[dict, list[float]]:
     prim_utils.create_prim("/World/Origin", "Xform", translation=origin)
 
     tmp_config = ry.Config()
-    tmp_config.addFile(ry.raiPath('../rai-robotModels/scenarios/pandaSingle.g'))
+    tmp_config.addFile(ry.raiPath('../rai-robotModels/scenarios/pandasTable.g'))
 
     frameNames = C.getFrameNames()     
     scene_entities = {}
@@ -53,7 +57,7 @@ def config2config(C: ry.Config) -> tuple[dict, list[float]]:
         frame = C.getFrame(name)
 
         if "table" in name:
-            # Table
+            # Table (just works if table is in frameName)
             cfg_table = sim_utils.MeshCuboidCfg(
                 size=tuple(frame.getSize()[:3]),
                 visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=tuple(frame.info()["color"])),
@@ -70,6 +74,7 @@ def config2config(C: ry.Config) -> tuple[dict, list[float]]:
             franka_arm_cfg = FRANKA_PANDA_CFG.replace(prim_path=f"/World/Origin/{franka_name}")
             franka_arm_cfg.init_state.pos = tuple(frame.getPosition())
             franka_arm_cfg.init_state.rot = (1/np.sqrt(2), 0.0, 0.0, 1/np.sqrt(2))
+
             franka_panda = Articulation(cfg=franka_arm_cfg)
 
             scene_entities[franka_name] = franka_panda
@@ -77,17 +82,18 @@ def config2config(C: ry.Config) -> tuple[dict, list[float]]:
         elif "table" in name and frame.getParent().info()["name"]=="origin":
             pass
             
+
+        # TODO mass, friction ? maybe
         elif not frame.getParent():
             ST = frame.getShapeType()
 
             if ST == ry.ST.box:
                 cfg_cuboid = sim_utils.MeshCuboidCfg(
                     size=tuple(frame.getSize()),
-                    #visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.info()["color"])),
-                    rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
+                    rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=False),
                     physics_material=sim_utils.RigidBodyMaterialCfg(),
-                    collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True),
-                    #
+                    collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
                 )
 
                 cfg_cuboid.func("/World/Origin_obj/Cuboid", cfg_cuboid, translation=tuple(frame.getPosition()), orientation=tuple(frame.getQuaternion()))
@@ -96,8 +102,8 @@ def config2config(C: ry.Config) -> tuple[dict, list[float]]:
             if ST == ry.ST.sphere:
                 cfg_cuboid = sim_utils.MeshSphereCfg(
                 radius=tuple(frame.getSize()),
-                #visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.info()["color"])),
-                rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
+                rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=False),
                 physics_material=sim_utils.RigidBodyMaterialCfg(),
                 collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
             )
@@ -108,8 +114,8 @@ def config2config(C: ry.Config) -> tuple[dict, list[float]]:
                 cfg_cuboid = sim_utils.MeshCapsuleCfg(
                 radius= frame.getSize()[1],
                 height= frame.getSize()[0], 
-                #visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.info()["color"])),
-                rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
+                rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=False),
                 physics_material=sim_utils.RigidBodyMaterialCfg(),
                 collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
                 )
@@ -120,8 +126,8 @@ def config2config(C: ry.Config) -> tuple[dict, list[float]]:
                 cfg_cylinder = sim_utils.MeshCylinderCfg(
                     radius= frame.getSize()[1],
                     height= frame.getSize()[0], 
-                    #visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.info()["color"])),
-                    rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
+                    rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=False),
                     physics_material=sim_utils.RigidBodyMaterialCfg(),
                     collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
                 )
@@ -138,15 +144,11 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articula
     sim_dt = sim.get_physics_dt()
     sim_time = 0.0
     count = 0
+    sim.pause()
+
     # Simulate physics
     while simulation_app.is_running():
         # reset
-        if count % 200 == 0:
-            # reset counters
-            sim_time = 0.0
-            count = 0
-            # reset the scene entities
-            print("[INFO]: Resetting robots state...")
 
         # perform step
         sim.step()
@@ -160,42 +162,19 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articula
 def main():
     """Main function."""
     C = ry.Config()
-    C.addFile(ry.raiPath('../rai-robotModels/scenarios/pandaSingle.g'))
-
-    C.addFrame('box') \
-        .setPosition([-.35,.1,1.]) \
-        .setShape(ry.ST.box, size=[.06,.06,.06]) \
-        .setColor([1,.5,0]) \
-        .setContact(1)
-
-    C.addFrame('cylinder') \
-        .setPosition([-.15,.1,1.]) \
-        .setShape(ry.ST.cylinder, size=[.06,.06]) \
-        .setColor([.5,.1,.3]) \
-        .setContact(1)
-
-    C.addFrame('capsule') \
-        .setPosition([.05,.1,1.]) \
-        .setShape(ry.ST.capsule, [.15, .05]) \
-        .setColor([.0,1.,.5]) 
-
-    C.addFrame('sphere') \
-        .setPosition([.25,.1,1.]) \
-        .setShape(ry.ST.sphere, [.05]) \
-        .setColor([.4, .3, .7]) \
-        .setContact(1)
+    C.addFile('scenarios/twoPandasManyObjects.g')
     
-
     C.view(True)
     
     # translate scene
     scene_entities = config2config(C)
 
     sim_cfg = sim_utils.SimulationCfg(device=args_cli.device)
+
     sim = sim_utils.SimulationContext(sim_cfg)
     # Set main camera
     sim.set_camera_view([0, 3.5, 3.5], [0.0, 0.0, 0.5])
-
+    
     sim.reset()
     print("[INFO]: Setup complete...")
     run_simulator(sim, scene_entities)

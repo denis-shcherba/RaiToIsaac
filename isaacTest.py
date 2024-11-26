@@ -1,33 +1,56 @@
-import robotic as ry
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+"""
+This script demonstrates different single-arm manipulators.
+
+.. code-block:: bash
+
+    # Usage
+    ./isaaclab.sh -p source/standalone/demos/arms.py
+
+"""
+
+"""Launch Isaac Sim Simulator first."""
 
 import argparse
+
 from omni.isaac.lab.app import AppLauncher
 
-# Initialize the simulation context
-
+# add argparse arguments
 parser = argparse.ArgumentParser(description="This script demonstrates different single-arm manipulators.")
+# append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
+# parse the arguments
 args_cli = parser.parse_args()
 
+# launch omniverse app
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
+"""Rest everything follows."""
 
 import numpy as np
-import torch 
-import time
+import torch
+import robotic as ry 
 
 import omni.isaac.core.utils.prims as prim_utils
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import Articulation
+from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 
-
+##
+# Pre-defined configs
+##
+# isort: off
 from omni.isaac.lab_assets import (
     FRANKA_PANDA_CFG,
 )
 
-
+# isort: on
 def config2config(C: ry.Config) -> tuple[dict, list[float]]:
     # TODO Camera, Origin maybe? (for different origins, actually not that important rn)7
     
@@ -99,7 +122,7 @@ def config2config(C: ry.Config) -> tuple[dict, list[float]]:
             if ST == ry.ST.box:
                 cfg_cuboid = sim_utils.MeshCuboidCfg(
                     size=tuple(frame.getSize()),
-                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
+                    #visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
                     rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=False),
                     physics_material=sim_utils.RigidBodyMaterialCfg(),
                     collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
@@ -111,7 +134,7 @@ def config2config(C: ry.Config) -> tuple[dict, list[float]]:
             if ST == ry.ST.sphere:
                 cfg_cuboid = sim_utils.MeshSphereCfg(
                 radius=tuple(frame.getSize()),
-                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
+                #visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
                 rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=False),
                 physics_material=sim_utils.RigidBodyMaterialCfg(),
                 collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
@@ -123,7 +146,7 @@ def config2config(C: ry.Config) -> tuple[dict, list[float]]:
                 cfg_cuboid = sim_utils.MeshCapsuleCfg(
                 radius= frame.getSize()[1],
                 height= frame.getSize()[0], 
-                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
+                #visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
                 rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=False),
                 physics_material=sim_utils.RigidBodyMaterialCfg(),
                 collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
@@ -135,7 +158,7 @@ def config2config(C: ry.Config) -> tuple[dict, list[float]]:
                 cfg_cylinder = sim_utils.MeshCylinderCfg(
                     radius= frame.getSize()[1],
                     height= frame.getSize()[0], 
-                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
+                    #visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
                     rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=False),
                     physics_material=sim_utils.RigidBodyMaterialCfg(),
                     collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
@@ -154,25 +177,42 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articula
     sim_time = 0.0
     count = 0
 
-    for robot in entities.values():
-        # Reset root state
-        root_state = robot.data.default_root_state.clone()
-        robot.write_root_state_to_sim(root_state)
-        
-        # Reset to default joint positions
-        joint_pos = robot.data.default_joint_pos.clone()
-        joint_vel = robot.data.default_joint_vel.clone()
-        robot.write_joint_state_to_sim(joint_pos, joint_vel)
-        robot.reset()
-        
+    delta = np.asarray([-0.09897264,  0.31354774 , 0.04517093, -2.67476797, -0.35052074 , 2.98068887,-0.49513032, .04, .04]) - np.asarray([0, -.5,  0,  -2,  0 , 2, -.5, .04, .04])
+    start = np.asarray([0, -.5,  0,  -2,  0 , 2, -.5, .04, .04])
+    # 3 180
     sim.pause()
 
+    # Simulate physics
     while simulation_app.is_running():
         # reset
+        if count == 0:
             # reset counters
-        sim_time = 0.0
-        count = 0
+            sim_time = 0.0
+            count = 0
+            # reset the scene entities
+            for index, robot in enumerate(entities.values()):
+                # root state
+                root_state = robot.data.default_root_state.clone()
+                robot.write_root_state_to_sim(root_state)
+                # set joint positions
+                joint_pos, joint_vel = robot.data.default_joint_pos.clone(), robot.data.default_joint_vel.clone()
+                robot.write_joint_state_to_sim(joint_pos, joint_vel)
+                # clear internal buffers
+                robot.reset()
+            print("[INFO]: Resetting robots state...")
+        # apply random actions to the robots
+        
+        if count % 100 ==0:
+            print("h")
 
+        for robot in entities.values():
+            if count < 300:  
+
+                # generate random joint positions
+                joint_pos_target = robot.data.default_joint_pos
+                joint_pos_target += torch.tensor(delta, device="cuda")/300
+                robot.set_joint_position_target(joint_pos_target)
+                robot.write_data_to_sim()
         # perform step
         sim.step()
         # update sim-time
@@ -182,28 +222,32 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articula
         for robot in entities.values():
             robot.update(sim_dt)
 
+
 def main():
     """Main function."""
+
     C = ry.Config()
     C.addFile('scenarios/pandaOneBlock.g')
-    
+
     C.view(True)
-    
-    # translate scene
-    scene_entities = config2config(C)
 
+    # Initialize the simulation context
     sim_cfg = sim_utils.SimulationCfg(device=args_cli.device)
-
     sim = sim_utils.SimulationContext(sim_cfg)
     # Set main camera
-    sim.set_camera_view([0, 3.5, 3.5], [0.0, 0.0, 0.5])
-    
+    sim.set_camera_view([3.5, 0.0, 3.2], [0.0, 0.0, 0.5])
+    # design scene
+    scene_entities = config2config(C)
+    # Play the simulator
     sim.reset()
+    # Now we are ready!
     print("[INFO]: Setup complete...")
+    # Run the simulator
     run_simulator(sim, scene_entities)
 
 
 if __name__ == "__main__":
+    # run the main function
     main()
-
+    # close sim app
     simulation_app.close()

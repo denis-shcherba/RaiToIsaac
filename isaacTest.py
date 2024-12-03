@@ -122,7 +122,7 @@ def config2config(C: ry.Config) -> tuple[dict, list[float]]:
             if ST == ry.ST.box:
                 cfg_cuboid = sim_utils.MeshCuboidCfg(
                     size=tuple(frame.getSize()),
-                    #visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
                     rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=False),
                     physics_material=sim_utils.RigidBodyMaterialCfg(),
                     collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
@@ -134,7 +134,7 @@ def config2config(C: ry.Config) -> tuple[dict, list[float]]:
             if ST == ry.ST.sphere:
                 cfg_cuboid = sim_utils.MeshSphereCfg(
                 radius=tuple(frame.getSize()),
-                #visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
                 rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=False),
                 physics_material=sim_utils.RigidBodyMaterialCfg(),
                 collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
@@ -146,7 +146,7 @@ def config2config(C: ry.Config) -> tuple[dict, list[float]]:
                 cfg_cuboid = sim_utils.MeshCapsuleCfg(
                 radius= frame.getSize()[1],
                 height= frame.getSize()[0], 
-                #visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
                 rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=False),
                 physics_material=sim_utils.RigidBodyMaterialCfg(),
                 collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
@@ -158,7 +158,7 @@ def config2config(C: ry.Config) -> tuple[dict, list[float]]:
                 cfg_cylinder = sim_utils.MeshCylinderCfg(
                     radius= frame.getSize()[1],
                     height= frame.getSize()[0], 
-                    #visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color = tuple(frame.getMeshColors()[0][0:3]/255)),
                     rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=False),
                     physics_material=sim_utils.RigidBodyMaterialCfg(),
                     collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True)
@@ -180,7 +180,7 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articula
     delta = np.asarray([-0.09897264,  0.31354774 , 0.04517093, -2.67476797, -0.35052074 , 2.98068887,-0.49513032, .04, .04]) - np.asarray([0, -.5,  0,  -2,  0 , 2, -.5, .04, .04])
     start = np.asarray([0, -.5,  0,  -2,  0 , 2, -.5, .04, .04])
     # 3 180
-    sim.pause()
+    #sim.pause()
 
     # Simulate physics
     while simulation_app.is_running():
@@ -212,8 +212,17 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articula
                 joint_pos_target = robot.data.default_joint_pos
                 joint_pos_target += torch.tensor(delta, device="cuda")/300
                 robot.set_joint_position_target(joint_pos_target)
+                robot.write_data_to_sim() # perform step
+
+                
+                joint_eff_target = torch.tensor([0,0,0,0,0,0,0,0,0], device="cuda")
+                robot.set_joint_effort_target(joint_eff_target)
                 robot.write_data_to_sim()
-        # perform step
+
+            # if count > 300:  
+            #     joint_eff_target = torch.tensor([0,0,0,0,0,0,0,.1,.1], device="cuda")
+            #     robot.set_joint_effort_target(joint_eff_target)
+            #     robot.write_data_to_sim()
         sim.step()
         # update sim-time
         sim_time += sim_dt
@@ -235,7 +244,7 @@ def main():
     sim_cfg = sim_utils.SimulationCfg(device=args_cli.device)
     sim = sim_utils.SimulationContext(sim_cfg)
     # Set main camera
-    sim.set_camera_view([3.5, 0.0, 3.2], [0.0, 0.0, 0.5])
+    sim.set_camera_view([0, 3.5, 3.5], [0.0, 0.0, 0.5])
     # design scene
     scene_entities = config2config(C)
     # Play the simulator

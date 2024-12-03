@@ -7,7 +7,6 @@ C.addFile('scenarios/pandaOneBlock.g')
 C.view(True)
 
 bot = ry.BotOp(C, False)
-
 qHome = C.getJointState()
 
 komo = ry.KOMO(C, 1,1,0, True)

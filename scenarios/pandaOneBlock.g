@@ -42,4 +42,4 @@ panda_collCameraWrist(cameraWrist): {
  , shape: capsule, color: [1.,1.,1.,.2], size: [.05, .03], contact: -3 }
 
 
-box: { X: [0 .2 .68], shape: box, size: [.06 .06 .06], color: [0,.0,1] , contact: 1}
+box: { X: [0 .3 .68], shape: box, size: [.06 .06 .06], color: [0,.0,1] , contact: 1}
